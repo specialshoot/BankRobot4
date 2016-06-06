@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.champion.bankrobot4.PictureActivity">
+
+    <com.daimajia.slider.library.SliderLayout
+        android:id="@+id/slider"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:auto_cycle="false"
+        app:indicator_visibility="visible"
+        app:pager_animation="Accordion"
+        app:pager_animation_span="1100" />
+
+    <RelativeLayout
+        android:id="@+id/picture_back"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="20dp"
+        android:layout_marginRight="20dp"
+        android:background="@drawable/circle_background">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/camera_back" />
+    </RelativeLayout>
+</RelativeLayout>

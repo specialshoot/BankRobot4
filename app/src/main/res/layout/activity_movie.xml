@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context="com.champion.bankrobot4.MovieActivity">
+
+    <FrameLayout
+        android:id="@+id/video_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black">
+
+        <com.champion.bankrobot4.view.videoview.UniversalVideoView
+            android:id="@+id/videoView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            app:uvv_autoRotation="false"
+            app:uvv_fitXY="true" />
+
+        <com.champion.bankrobot4.view.videoview.UniversalMediaController
+            android:id="@+id/media_controller"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:uvv_scalable="true" />
+    </FrameLayout>
+
+</LinearLayout>
