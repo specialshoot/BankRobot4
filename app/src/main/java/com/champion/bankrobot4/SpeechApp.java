@@ -2,9 +2,15 @@ package com.champion.bankrobot4;
 
 import android.app.Application;
 import android.util.DisplayMetrics;
+import android.util.Log;
 
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechUtility;
+
+import java.net.URISyntaxException;
+
+import io.socket.client.IO;
+import io.socket.client.Socket;
 
 /**
  * Created by 轾 on 2016/5/15.
@@ -88,5 +94,21 @@ public class SpeechApp extends android_serialport_api.Application {
     //获取应用的data/data/....Cache目录
     public String getCacheDirPath() {
         return getCacheDir().getAbsolutePath();
+    }
+
+    //SocketIO
+    private Socket mSocket;
+    {
+        try {
+            mSocket = IO.socket(Constants.CHAT_SERVER_URL);
+            Log.i("SocketError","socket no error");
+        } catch (URISyntaxException e) {
+            Log.i("SocketError","socket error");
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Socket getSocket() {
+        return mSocket;
     }
 }

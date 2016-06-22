@@ -95,4 +95,11 @@
             android:layout_centerInParent="true"
             android:src="@drawable/serial" />
     </RelativeLayout>
+
+    <TextView
+        android:id="@+id/chat_io"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="未连接"
+        android:textColor="@android:color/white"/>
 </RelativeLayout>

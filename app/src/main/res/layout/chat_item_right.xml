@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:background="@android:color/transparent"
-              android:orientation="vertical">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/chat_item_right_tv_time"
@@ -12,14 +12,15 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="@dimen/activity_horizontal_margin"
         android:text="2014-12-12 15:08:00"
-        android:textAppearance="?android:attr/textAppearanceSmall"/>
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
         android:layout_marginLeft="40dp"
         android:layout_marginTop="15dp"
+        android:background="@android:color/transparent"
         android:gravity="top|right"
         android:orientation="horizontal">
 
@@ -31,7 +32,8 @@
             android:background="@drawable/chat_item_right_msg_bg_normal"
             android:padding="10dp"
             android:text="New TextNew TextNew TextNew TextNew TextNew TextNew TextNew TextNew Text"
-            android:textColor="@android:color/black"/>
+            android:textColor="@android:color/black"
+            android:textSize="@dimen/say_size" />
 
         <ImageView
             android:id="@+id/imageView"
@@ -39,7 +41,7 @@
             android:layout_height="@dimen/unite_pro_item_icon"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="@dimen/activity_horizontal_margin"
-            android:src="@drawable/champion_client"/>
+            android:src="@drawable/champion_client" />
 
     </LinearLayout>
 

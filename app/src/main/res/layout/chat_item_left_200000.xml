@@ -12,7 +12,8 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="@dimen/activity_horizontal_margin"
         android:text="2014-12-12 15:08:00"
-        android:textAppearance="?android:attr/textAppearanceSmall" />
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"

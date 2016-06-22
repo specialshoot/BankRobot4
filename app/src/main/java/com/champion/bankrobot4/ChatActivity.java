@@ -11,11 +11,14 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Layout;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -23,6 +26,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.champion.bankrobot4.adapter.ChatAdapter;
+import com.champion.bankrobot4.model.WeatherInfo;
 import com.champion.bankrobot4.utils.JsonParser;
 import com.champion.bankrobot4.utils.ToastUtils;
 import com.champion.bankrobot4.view.WebDialog;
@@ -60,6 +64,8 @@ import android_serialport_api.SerialPortActivity;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
 public class ChatActivity extends SerialPortActivity {
 
@@ -82,6 +88,19 @@ public class ChatActivity extends SerialPortActivity {
     ImageView iv_animation;
     @BindView(R.id.voice_layout)
     View voice_layout;
+    @BindView(R.id.chat_io)
+    TextView chat_io;
+
+    private int noSpeechCount = 0;//无语音输入计数
+    private boolean askWeather = false;//是否询问天气
+    private int weatherCount = 0;
+    private boolean ManMode = false;//是否调整为手动模式
+
+    //SocketIO
+    private Socket mSocket;
+    private Boolean isConnected = true;
+    private boolean mTyping = false;
+    private String mUsername = "robot1";
 
     //串口
     byte[] start;
@@ -92,7 +111,8 @@ public class ChatActivity extends SerialPortActivity {
     //科大语音
     private String speechResult = "";
     //科大讯飞相应变量
-    private String mEngineType = SpeechConstant.TYPE_CLOUD; //语音类型,云端(用于语音听写、语音合成)
+    private String mEngineTypeLocal = SpeechConstant.TYPE_LOCAL; //语音类型,自动(用于语音听写、语音合成)
+    private String mEngineTypeCloud = SpeechConstant.TYPE_CLOUD; //语音类型,云端(用于语音听写、语音合成)
     //语音听写相关参数Iat
     SpeechRecognizer mIat;    //语音听写对象
     //RecognizerDialog mIatDialog;  //语音听写对话框
@@ -234,6 +254,263 @@ public class ChatActivity extends SerialPortActivity {
         mIvw = VoiceWakeuper.createWakeuper(this, null);
         DoWake();   //唤醒打开
         //DoSpeak(hello);
+
+        //SocketIO初始化
+        SpeechApp app = (SpeechApp) getApplication();
+        mSocket = app.getSocket();
+        mSocket.on(Socket.EVENT_CONNECT, onConnect);
+        mSocket.on(Socket.EVENT_DISCONNECT, onDisconnect);
+        mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        mSocket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
+        mSocket.on("login", onLogin);
+        mSocket.on("new message", onNewMessage);
+        mSocket.on("user joined", onUserJoined);
+        mSocket.on("user left", onUserLeft);
+        mSocket.on("typing", onTyping);
+        mSocket.on("stop typing", onStopTyping);
+        mSocket.connect();
+        attemptLogin();
+    }
+
+    private Emitter.Listener onLogin = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Log.i(TAG, "Enter onLogin");
+            JSONObject data = (JSONObject) args[0];
+
+            int numUsers;
+            try {
+                numUsers = data.getInt("numUsers");
+            } catch (JSONException e) {
+                return;
+            }
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    chat_io.setText("Login");
+                }
+            });
+            Log.i("onLogin", "onLogin");
+            attemptSend(mUsername + " onLogin FINISH . Status : " + (ManMode ? "手动" : "自动"));
+        }
+    };
+
+    private Emitter.Listener onConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i(TAG, "Enter onConnect");
+                    if (!isConnected) {
+                        if (null != mUsername) {
+                            mSocket.emit("add user", mUsername);
+                        }
+                        ToastUtils.showShort(getApplicationContext(),
+                                R.string.connect);
+                        isConnected = true;
+                        chat_io.setText("连接成功");
+//                        attemptLogin();
+
+                        Log.i("onConnect", "onConnect");
+                    }
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onDisconnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i(TAG, "Enter onDisconnect");
+                    isConnected = false;
+                    ToastUtils.showShort(getApplicationContext(),
+                            R.string.disconnect);
+                    chat_io.setText("未连接成功，请检查网络");
+                    Log.i("onDisconnect", "onDisconnect");
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onConnectError = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ToastUtils.showShort(getApplicationContext(),
+                            R.string.error_connect);
+                    Log.i(TAG, "connect error");
+                    chat_io.setText("连接错误");
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onNewMessage = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    String message;
+                    try {
+                        username = data.getString("username");
+                        message = data.getString("message");
+                    } catch (JSONException e) {
+                        return;
+                    }
+                    //处理message
+                    Log.i("onNewMessage", username + " : " + message);
+                    if (!username.equals("A")) {
+                        return;
+                    }
+                    if (message.equals("%%%")) {
+                        ManMode = true;
+                        askWeather = false;
+                        attemptSend(mUsername + " 改变状态为 : " + (ManMode ? "手动" : "自动") + " FINISH");
+                        return;
+                    }
+                    if (message.equals("###")) {
+                        ManMode = false;
+                        attemptSend(mUsername + " 改变状态为 : " + (ManMode ? "手动" : "自动") + " FINISH");
+                        return;
+                    }
+                    if (message.equals("***")) {
+                        attemptSend(mUsername + " 当前状态为 " + (ManMode ? "手动" : "自动") + " FINISH");
+                        return;
+                    }
+                    if (message.equals("dance")) {
+                        if (mSerialPort != null) {
+                            dance();
+                        }
+                        return;
+                    }
+                    if (message.contains("FINISH")) {
+                        return;
+                    }
+                    ChatMsgEntity chatMsgEntity = new ChatMsgEntity(robot_name, sayNoPrefix(message), ChatMsgEntity.Type.you, new Date());
+                    Message back = handler.obtainMessage();
+                    back.obj = chatMsgEntity;
+                    handler.sendMessage(back);
+                    DoSpeak(message);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onUserJoined = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    int numUsers;
+                    try {
+                        username = data.getString("username");
+                        numUsers = data.getInt("numUsers");
+                    } catch (JSONException e) {
+                        return;
+                    }
+                    Log.i("onUserJoined", username + " : " + numUsers);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onUserLeft = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    int numUsers;
+                    try {
+                        username = data.getString("username");
+                        numUsers = data.getInt("numUsers");
+                    } catch (JSONException e) {
+                        return;
+                    }
+                    Log.i("onUserLeft", username + " : " + numUsers);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onTyping = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    try {
+                        username = data.getString("username");
+                    } catch (JSONException e) {
+                        return;
+                    }
+                    Log.i("onTyping", username);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onStopTyping = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    try {
+                        username = data.getString("username");
+                    } catch (JSONException e) {
+                        return;
+                    }
+                    Log.i("onStopTyping", username);
+                }
+            });
+        }
+    };
+
+    private void attemptSend(String message) {
+        if (null == mUsername) return;
+        if (!mSocket.connected()) return;
+
+        mTyping = false;
+
+        // perform the sending message attempt.
+        mSocket.emit("new message", message);
+    }
+
+    private Runnable onTypingTimeout = new Runnable() {
+        @Override
+        public void run() {
+            if (!mTyping) {
+                return;
+            }
+            mTyping = false;
+            mSocket.emit("stop typing");
+        }
+    };
+
+    private void attemptLogin() {
+        // perform the user login attempt.
+        mSocket.emit("add user", mUsername);
+        Log.i(TAG, "attempLogin");
     }
 
     private String sayNoPrefix(String s) {
@@ -241,7 +518,7 @@ public class ChatActivity extends SerialPortActivity {
     }
 
     /********************
-     * 测试用，测试后去除按钮可以消除
+     * 按下后说话识别
      ******************/
     @OnClick(R.id.voice_layout)
     void chat_test() {
@@ -257,7 +534,6 @@ public class ChatActivity extends SerialPortActivity {
                 mIvw.stopListening();
             }
 
-            setAnimation();
             DoListener();   //语音识别
         } catch (Exception e) {
             e.printStackTrace();
@@ -272,21 +548,33 @@ public class ChatActivity extends SerialPortActivity {
 
     @OnClick(R.id.chat_serial)
     void chat_serial() {
+
         if (mSerialPort != null) {
-            start = new byte[1];
-            Arrays.fill(start, (byte) 0xaa);
-            end = new byte[1];
-            Arrays.fill(end, (byte) 0x55);
-            try {
-                if (mOutputStream != null) {
-                    mOutputStream.write(start);
-                    mOutputStream.write(new String("A").getBytes());
-                    mOutputStream.write(new String("A").getBytes());
-                    mOutputStream.write(end);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            dance();
+        }
+    }
+
+    public void dance() {
+        start = new byte[1];
+        Arrays.fill(start, (byte) 0xaa);
+        end = new byte[1];
+        Arrays.fill(end, (byte) 0x55);
+        try {
+            if (mOutputStream != null) {
+                mOutputStream.write(start);
+                mOutputStream.write(new String("A").getBytes());
+                mOutputStream.write(new String("A").getBytes());
+                mOutputStream.write(end);
+                mOutputStream.write(start);
+                mOutputStream.write(new String("A").getBytes());
+                mOutputStream.write(new String("A").getBytes());
+                mOutputStream.write(end);
+                ToastUtils.showShort(ChatActivity.this, "跳舞");
+                attemptSend(mUsername + "Send Dance Success ;" + " 当前状态为 " + (ManMode ? "手动" : "自动") + " FINISH");
             }
+        } catch (IOException e) {
+            attemptSend(mUsername + "Send Dance Failed ;" + " 当前状态为 " + (ManMode ? "手动" : "自动") + " FINISH");
+            e.printStackTrace();
         }
     }
 
@@ -304,7 +592,9 @@ public class ChatActivity extends SerialPortActivity {
         iv_animation.setVisibility(View.VISIBLE);
         iv_animation.setBackgroundResource(R.drawable.animation_list);
         animation = (AnimationDrawable) iv_animation.getBackground();
-        animation.start();
+        if (animation != null) {
+            animation.start();
+        }
     }
 
     private void unSetAnimation() {
@@ -349,7 +639,7 @@ public class ChatActivity extends SerialPortActivity {
         // 清空参数
         mIat.setParameter(SpeechConstant.PARAMS, null);
         // 设置听写引擎
-        mIat.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
+        mIat.setParameter(SpeechConstant.ENGINE_TYPE, mEngineTypeCloud);
         // 设置返回结果格式
         mIat.setParameter(SpeechConstant.RESULT_TYPE, "json");
         // 设置语言
@@ -379,19 +669,19 @@ public class ChatActivity extends SerialPortActivity {
         // 清空参数
         mTts.setParameter(SpeechConstant.PARAMS, null);
         //设置合成
-        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
-            //设置使用云端引擎
-            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
-            //设置发音人
-            mTts.setParameter(SpeechConstant.VOICE_NAME, voicer);
-        } else {
-            //设置使用本地引擎
-            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
-            //设置发音人资源路径
-            mTts.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath());
-            //设置发音人
-            mTts.setParameter(SpeechConstant.VOICE_NAME, voicer);
-        }
+//        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+//            //设置使用云端引擎
+//            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+//            //设置发音人
+//            mTts.setParameter(SpeechConstant.VOICE_NAME, voicer);
+//        } else {
+        //设置使用本地引擎
+        mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+        //设置发音人资源路径
+        mTts.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath());
+        //设置发音人
+        mTts.setParameter(SpeechConstant.VOICE_NAME, voicer);
+//        }
         //设置合成语速
         mTts.setParameter(SpeechConstant.SPEED, mTtsSharedPreferences.getString("speed_preference", "50"));
         //设置合成音调
@@ -426,29 +716,6 @@ public class ChatActivity extends SerialPortActivity {
     }
 
     /**
-     * 带UI听写监听器
-     */
-    private RecognizerDialogListener mRecognizerDialogListener = new RecognizerDialogListener() {
-        @Override
-        public void onResult(RecognizerResult recognizerResult, boolean isLast) {
-            Log.d(TAG, "recognizer result：" + recognizerResult.getResultString());
-            String text = JsonParser.parseIatResult(recognizerResult.getResultString());
-            speechResult += text;
-            if (isLast) {
-                sendMsg(speechResult);
-//                DoIflyUnderstand(speechResult);
-                setFabClickable();
-                DoWake();
-            }
-        }
-
-        @Override
-        public void onError(SpeechError speechError) {
-            DoWake();
-        }
-    };
-
-    /**
      * 不带UI听写监听器。
      */
     private RecognizerListener mRecognizerListener = new RecognizerListener() {
@@ -468,11 +735,22 @@ public class ChatActivity extends SerialPortActivity {
          */
         @Override
         public void onError(SpeechError error) {
-            unSetAnimation();
-            setFabClickable();
-            checker.setImageResource(R.color.md_grey_600);
-            mIvw = VoiceWakeuper.getWakeuper();
-            DoWake();
+            Log.v(TAG, "onError -> " + error.toString());
+            Log.i(TAG, noSpeechCount + "");
+            if (noSpeechCount > 3) {
+                noSpeechCount = 0;
+                Log.i(TAG, "noSpeechCount清0");
+                DoWake();
+                unSetAnimation();
+                setFabClickable();
+                checker.setImageResource(R.color.md_grey_600);
+                mIvw = VoiceWakeuper.getWakeuper();
+                DoWake();
+            } else {
+                noSpeechCount++;
+                Log.i(TAG, "计数DoListener");
+                DoListener();
+            }
         }
 
         /**
@@ -480,6 +758,7 @@ public class ChatActivity extends SerialPortActivity {
          */
         @Override
         public void onEndOfSpeech() {
+            Log.v(TAG, "onEndOfSpeech");
             // 此回调表示：检测到了语音的尾端点，已经进入识别过程，不再接受语音输入
             showToast("结束说话");
             checker.setImageResource(R.color.md_grey_600);
@@ -495,7 +774,26 @@ public class ChatActivity extends SerialPortActivity {
             String text = JsonParser.parseIatResult(results.getResultString());
             speechResult += text;
             if (isLast) {
-                Log.i(TAG,"说了 -> " + speechResult);
+                Log.i(TAG, "说了 -> " + speechResult);
+                if (speechResult.equals(".") || speechResult.equals("。") || speechResult.equals(",") || speechResult.equals("，") || speechResult.equals("?") || speechResult.equals("？")) {
+
+                    Log.i(TAG, noSpeechCount + "");
+                    if (noSpeechCount > 3) {
+                        noSpeechCount = 0;
+                        Log.i(TAG, "noSpeechCount清0");
+                        DoWake();
+                        unSetAnimation();
+                        setFabClickable();
+                        checker.setImageResource(R.color.md_grey_600);
+                        mIvw = VoiceWakeuper.getWakeuper();
+                        DoWake();
+                    } else {
+                        noSpeechCount++;
+                        Log.i(TAG, "计数DoListener");
+                        DoListener();
+                    }
+                    return;
+                }
                 if (speechResult.contains("再见")) {
                     finish();
                 } else if (speechResult.contains("舞")) {
@@ -506,6 +804,10 @@ public class ChatActivity extends SerialPortActivity {
                         Arrays.fill(end, (byte) 0x55);
                         try {
                             if (mOutputStream != null) {
+                                mOutputStream.write(start);
+                                mOutputStream.write(new String("A").getBytes());
+                                mOutputStream.write(new String("A").getBytes());
+                                mOutputStream.write(end);
                                 mOutputStream.write(start);
                                 mOutputStream.write(new String("A").getBytes());
                                 mOutputStream.write(new String("A").getBytes());
@@ -527,14 +829,20 @@ public class ChatActivity extends SerialPortActivity {
                     startActivityForResult(intent, CAMERANUM);
                     return;
                 } else {
+                    if (!ManMode) {
+                        if (speechResult.contains("天气") || weatherCount == 1) {
+                            askWeather = true;
+                        }
+                    }
                     sendMsg(speechResult);
-//                    DoIflyUnderstand(speechResult);
+                    attemptSend(mUsername + " SAY " + speechResult + " . Status : " + (ManMode ? "手动" : "自动") + " NO FINISH");
+//                DoIflyUnderstand(speechResult);
                     unSetAnimation();
                     setFabClickable();
                     checker.setImageResource(R.color.md_grey_600);
                     mIvw = VoiceWakeuper.getWakeuper();
                 }
-                DoWake();
+//                DoWake();
             }
         }
 
@@ -578,7 +886,9 @@ public class ChatActivity extends SerialPortActivity {
         Message message = handler.obtainMessage();
         message.obj = chatMsgEntity;
         handler.sendMessage(message);
-        DoTuring(msg);
+        if (!ManMode) {
+            DoTuring(msg);
+        }
     }
 
     /**
@@ -623,6 +933,9 @@ public class ChatActivity extends SerialPortActivity {
             } else if (error != null) {
                 showToast(error.getPlainDescription(true));
             }
+            noSpeechCount = 0;
+            attemptSend(mUsername + " SPEAK FINISH . Status : " + (ManMode ? "手动" : "自动"));
+            DoListener();
 //            DoWake();
         }
 
@@ -711,8 +1024,6 @@ public class ChatActivity extends SerialPortActivity {
         setAnimation();
         speechResult = "";
         setIatParams();
-//        mIatDialog.setListener(mRecognizerDialogListener);
-//        mIatDialog.show();
         int ret = mIat.startListening(mRecognizerListener);
         if (ret != ErrorCode.SUCCESS) {
             showToast("听写失败,错误码：" + ret);
@@ -778,12 +1089,17 @@ public class ChatActivity extends SerialPortActivity {
      * @param msg 语音播报的内容
      */
     private void DoSpeak(String msg) {
+        if (mIat != null) {
+            mIat.stopListening();
+        }
+        unSetAnimation();
+        setFabClickable();
+        checker.setImageResource(R.color.md_grey_600);
+
         Message message = handlervoice.obtainMessage();
         message.obj = msg;
         handlervoice.sendMessage(message);
     }
-
-    private long time;
 
     /**
      * 图灵机器人识别
@@ -793,7 +1109,6 @@ public class ChatActivity extends SerialPortActivity {
     private void DoTuring(String msg) {
         try {
             System.out.println("进入DoTuring");
-            time = System.currentTimeMillis();
             String INFO = URLEncoder.encode(msg, "utf-8");
             String url = getString(R.string.turing_api_address) + "?key=" + getString(R.string.turing_api_key) + "&info=" + INFO + "&userid=" + getString(R.string.turing_api_userid);
             RequestQueue queue = Volley.newRequestQueue(this);
@@ -806,12 +1121,22 @@ public class ChatActivity extends SerialPortActivity {
                         showAlertDialog(url);
                     }
                     String response = getTuringText(s);
+                    Log.i(TAG, askWeather + " : " + response);
+                    if (askWeather) {
+                        if (weatherCount < 2) {
+                            response = DoWeather(response);
+                        } else {
+                            weatherCount = 0;
+                            askWeather = false;
+                        }
+                    }
+                    attemptSend(mUsername + " XUNFEI SAY " + response + " . Status : " + (ManMode ? "手动" : "自动") + " NO FINISH");
                     DoSpeak(response);
-                    System.out.println("backtime -> " + (System.currentTimeMillis() - time) + "ms");
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError volleyError) {
+                    askWeather = false;
                     ChatMsgEntity chatMsgEntity = new ChatMsgEntity(robot_name, getTuringText("您的问题好深奥,我无法回答"), ChatMsgEntity.Type.you, new Date());
                     Message message = handler.obtainMessage();
                     message.obj = chatMsgEntity;
@@ -820,11 +1145,37 @@ public class ChatActivity extends SerialPortActivity {
                 }
             }));
         } catch (UnsupportedEncodingException e) {
+            askWeather = false;
             ChatMsgEntity chatMsgEntity = new ChatMsgEntity(robot_name, getTuringText("您的问题好深奥,我无法回答"), ChatMsgEntity.Type.you, new Date());
             Message message = handler.obtainMessage();
             message.obj = chatMsgEntity;
             handler.sendMessage(message);
             DoSpeak("您的问题好深奥,我无法回答");
+        }
+    }
+
+    private String DoWeather(String weatherInfo) {
+        int index = weatherInfo.indexOf(":");
+        if (index != -1) {
+            String city = weatherInfo.substring(0, index);
+            weatherInfo = weatherInfo.substring(index + 1);
+            String[] weatherDay = weatherInfo.split(";");
+            String s = weatherDay[0];
+            String[] detail;
+            s = s.replaceAll("(?:/|,|-|°)", " ");
+            detail = s.split("\\s+");
+            WeatherInfo info = new WeatherInfo(detail);
+            askWeather = false;
+            weatherCount = 0;
+            return city + "," + info.toString();
+        } else {
+            askWeather = true;
+            weatherCount++;
+            if (weatherCount < 2) {
+                return "天气查询失败,悄悄告诉我你在哪个城市";
+            } else {
+                return "这次真的查不到天气了";
+            }
         }
     }
 
@@ -859,16 +1210,17 @@ public class ChatActivity extends SerialPortActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (resultCode) {
             case CAMERANUM:
-                unSetAnimation();
-                setFabClickable();
-                checker.setImageResource(R.color.md_grey_600);
-                mIvw = VoiceWakeuper.getWakeuper();
+//                unSetAnimation();
+//                setFabClickable();
+//                checker.setImageResource(R.color.md_grey_600);
+//                mIvw = VoiceWakeuper.getWakeuper();
 //                if (mIvw != null) {
 //                    mIvw.cancel();
 //                    mIvw.destroy();
 //                }
 //                mIvw = VoiceWakeuper.createWakeuper(this, null);
-                DoWake();
+//                DoWake();
+                chat_test();
                 break;
             default:
                 break;
@@ -894,6 +1246,19 @@ public class ChatActivity extends SerialPortActivity {
             mIvw.cancel();
             mIvw.destroy();
         }
+
+        //SocketIO
+        mSocket.disconnect();
+        mSocket.off(Socket.EVENT_CONNECT, onConnect);
+        mSocket.off(Socket.EVENT_DISCONNECT, onDisconnect);
+        mSocket.off(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        mSocket.off(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
+        mSocket.off("login", onLogin);
+        mSocket.off("new message", onNewMessage);
+        mSocket.off("user joined", onUserJoined);
+        mSocket.off("user left", onUserLeft);
+        mSocket.off("typing", onTyping);
+        mSocket.off("stop typing", onStopTyping);
     }
 
 

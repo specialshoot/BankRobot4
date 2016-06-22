@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/BankRobot4.iml" filepath="$PROJECT_DIR$/BankRobot4.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BankRobot5Offline.iml" filepath="$PROJECT_DIR$/BankRobot5Offline.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

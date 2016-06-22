@@ -3,6 +3,7 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
+    <dimen name="say_size">36sp</dimen>
 
     <!-- chat -->
     <dimen name="unite_pro_item_height">60dp</dimen>

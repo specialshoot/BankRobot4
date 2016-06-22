@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:background="@android:color/transparent"
-              android:orientation="vertical">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/chat_item_left100000_tv_time"
@@ -12,16 +12,17 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="@dimen/activity_horizontal_margin"
         android:text="2014-12-12 15:08:00"
-        android:textAppearance="?android:attr/textAppearanceSmall"/>
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
         android:layout_marginRight="40dp"
         android:layout_marginTop="15dp"
-        android:layout_marginLeft="@dimen/activity_horizontal_margin"
-        android:gravity="left|top"
         android:background="@android:color/transparent"
+        android:gravity="left|top"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -34,7 +35,7 @@
                 android:id="@+id/imageView"
                 android:layout_width="@dimen/unite_pro_item_icon"
                 android:layout_height="@dimen/unite_pro_item_icon"
-                android:src="@drawable/champion_black"/>
+                android:src="@drawable/champion_black" />
         </LinearLayout>
 
         <TextView
@@ -45,7 +46,8 @@
             android:background="@drawable/chat_item_left_msg_bg_normal"
             android:padding="10dp"
             android:text="New Text"
-            android:textColor="@android:color/black"/>
+            android:textColor="@android:color/black"
+            android:textSize="@dimen/say_size" />
 
 
     </LinearLayout>

@@ -38,7 +38,7 @@ public class Application extends android.app.Application {
 //			}
 
             String path = "/dev/ttyS1";
-            int baudrate = 9600;
+            int baudrate = 115200;
             /* Open the serial port */
             mSerialPort = new SerialPort(new File(path), baudrate, 0);
         }
