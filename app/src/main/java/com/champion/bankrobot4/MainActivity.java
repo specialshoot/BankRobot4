@@ -1,103 +1,51 @@
 package com.champion.bankrobot4;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.app.Activity;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
-import android.view.Window;
+import android.widget.ImageView;
 
 import com.champion.bankrobot4.utils.ToastUtils;
 import com.champion.bankrobot4.view.CircleMenuLayout;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.security.InvalidParameterException;
+import java.util.Timer;
+import java.util.TimerTask;
 
-import android_serialport_api.SerialPort;
-import android_serialport_api.SerialPortActivity;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 
-public class MainActivity extends SerialPortActivity {
+public class MainActivity extends Activity {
 
     @BindView(R.id.id_menulayout)
     CircleMenuLayout mCircleMenuLayout;
-    //Serial Port
-//    protected android_serialport_api.Application mApplication;
-    protected SpeechApp mApplication;
-    protected SerialPort mSerialPort;
-    protected OutputStream mOutputStream;
-//    private InputStream mInputStream;
-//    private ReadThread mReadThread;
 
-    private String[] mItemTexts = new String[]{"视频播放", "画廊", "简介", "聊天"};
+    private boolean isHide=false;
+
+    private View main;
+    private static Boolean isExit = false;    //判断是否第一次点击退出
+    public static final int FLAG_HOMEKEY_DISPATCHED = 0x80000000; //需要自己定义标志
+
+    private String[] mItemTexts = new String[]{"视频播放", "画廊", "人脸录入", "聊天"};
     private int[] mItemImgs = new int[]{R.drawable.film, R.drawable.picture,
             R.drawable.introduce, R.drawable.bubbles};
-
-    /**
-     * 读取流中的数据
-     */
-//    private class ReadThread extends Thread {
-//
-//        @Override
-//        public void run() {
-//            super.run();
-//            while (!isInterrupted()) {
-//                int size;
-//                try {
-//                    byte[] buffer = new byte[64];
-//                    if (mInputStream == null) return;
-//                    size = mInputStream.read(buffer);
-//                    if (size > 0) {
-//                        onDataReceived(buffer, size);
-//                    }
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                    return;
-//                }
-//            }
-//        }
-//    }
-    protected void onDataReceived(final byte[] buffer, final int size) {
-        //处理收到的数据
-//        runOnUiThread(new Runnable() {
-//            public void run() {
-//                ToastUtils.showShort(MainActivity.this, new String(buffer, 0, size));
-//                System.out.println(new String(buffer, 0, size));
-//            }
-//        });
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        this.getWindow().setFlags(FLAG_HOMEKEY_DISPATCHED, FLAG_HOMEKEY_DISPATCHED);//关键代码
+        main = getLayoutInflater().from(this).inflate(R.layout.activity_main, null);
+        setContentView(main);
         ButterKnife.bind(this);
         initAction();
     }
 
     private void initAction() {
-        mApplication = (SpeechApp) getApplication();
-        try {
-            mSerialPort = mApplication.getSerialPort();
-            mOutputStream = mSerialPort.getOutputStream();
-//            mInputStream = mSerialPort.getInputStream();
 
-			/* Create a receiving thread
-             * 数据接收 */
-//            mReadThread = new ReadThread();
-//            mReadThread.start();
-        } catch (SecurityException e) {
-            DisplayError(R.string.error_security);
-        } catch (IOException e) {
-            DisplayError(R.string.error_unknown);
-        } catch (InvalidParameterException e) {
-            DisplayError(R.string.error_configuration);
-        }
-
+        sendBroadcast(new Intent("android.intent.action.DISPLAY_STATUSBAR"));//进入APK主页时发送广播通知隐藏工具栏
         mCircleMenuLayout.setMenuItemIconsAndTexts(mItemImgs, mItemTexts);
         mCircleMenuLayout.setOnMenuItemClickListener(new CircleMenuLayout.OnMenuItemClickListener() {
             @Override
@@ -113,6 +61,8 @@ public class MainActivity extends SerialPortActivity {
                         startActivity(intent);
                         break;
                     case 2:
+                        intent = new Intent(MainActivity.this, FaceWebActivity.class);
+                        startActivity(intent);
                         break;
                     case 3:
                         intent = new Intent(MainActivity.this, ChatActivity.class);
@@ -130,15 +80,65 @@ public class MainActivity extends SerialPortActivity {
         });
     }
 
-    private void DisplayError(int resourceId) {
-        AlertDialog.Builder b = new AlertDialog.Builder(this);
-        b.setTitle("Error");
-        b.setMessage(resourceId);
-        b.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                ToastUtils.showShort(MainActivity.this, "串口打开失败");
-            }
-        });
-        b.show();
+    @OnClick(R.id.trueExit)
+    void exitBy2Click() {
+        Timer tExit = null;
+        if (isExit == false) {
+            isExit = true;
+            ToastUtils.showShort(MainActivity.this, "再按一次退出程序");
+            tExit = new Timer();
+            tExit.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    isExit = false;   //取消退出
+                }
+            }, 2000);    //等待2秒钟
+        } else {
+            sendBroadcast(new Intent("android.intent.action.HIDE_STATUSBAR"));//点击显示按钮时发送广播通知显示工具栏
+            finish();
+        }
+    }
+
+    @OnClick(R.id.hideNav)
+    void hideNav(){
+        if(isHide){
+            isHide=false;
+            sendBroadcast(new Intent("android.intent.action.HIDE_STATUSBAR"));//点击显示按钮时发送广播通知显示工具栏
+        }else{
+            isHide=true;
+            sendBroadcast(new Intent("android.intent.action.DISPLAY_STATUSBAR"));//点击隐藏按钮时发送广播通知隐藏工具栏
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_HOME:
+                ToastUtils.showShort(MainActivity.this,getResources().getString(R.string.cannotexit));
+                return true;
+            case KeyEvent.KEYCODE_BACK:
+                ToastUtils.showShort(MainActivity.this,getResources().getString(R.string.cannotexit));
+                return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    protected void onPause() {
+        sendBroadcast(new Intent("android.intent.action.HIDE_STATUSBAR"));//点击显示按钮时发送广播通知显示工具栏
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        sendBroadcast(new Intent("android.intent.action.DISPLAY_STATUSBAR"));//点击隐藏按钮时发送广播通知隐藏工具栏
+        super.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        sendBroadcast(new Intent("android.intent.action.HIDE_STATUSBAR"));//点击显示按钮时发送广播通知显示工具栏
+        super.onDestroy();
     }
 }

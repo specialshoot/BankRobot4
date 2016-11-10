@@ -1,10 +1,7 @@
 package com.champion.bankrobot4.adapter;
 
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.text.Html;
 import android.util.Log;
@@ -22,9 +19,9 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.champion.bankrobot4.R;
 import com.champion.bankrobot4.utils.ViewHolderUtil;
-import com.champion.bankrobot4.view.WebDialog;
 import com.champion.bankrobot4.view.chat.ChatMsgEntity;
 import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -52,6 +49,7 @@ public class ChatAdapter extends BaseAdapter {
         this.context = context;
         this.data = data;
         imageLoader = ImageLoader.getInstance();
+        imageLoader.init(ImageLoaderConfiguration.createDefault(context));
     }
 
     @Override
@@ -167,10 +165,12 @@ public class ChatAdapter extends BaseAdapter {
                 }
                 Log.d(TAG, "304000");
             } else if ("308000".equals(code)) {//电影
+                System.out.println(msg);
                 convertView = base_msg(parent, chatMsgEntity);
                 String lists = getLists(msg);
                 JSONArray jsonArray = JSON.parseArray(lists);
                 int size = jsonArray.size();
+                System.out.println("size -> "+size);
                 if (size > 5) {
                     size = 5;
                 }

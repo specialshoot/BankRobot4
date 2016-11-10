@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/mainbackground"
+    android:background="@drawable/mainbackground2"
     tools:context="com.champion.bankrobot4.ChatActivity">
 
     <ImageView
@@ -13,7 +13,6 @@
         android:src="@color/md_grey_600" />
 
     <RelativeLayout
-        android:id="@+id/chatlayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/chat_checklistener"
@@ -31,32 +30,43 @@
             android:smoothScrollbar="true" />
     </RelativeLayout>
 
-
     <RelativeLayout
         android:id="@+id/voice_layout"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
+        android:layout_centerHorizontal="true"
         android:layout_marginBottom="20dp"
-        android:layout_marginRight="20dp"
-        android:background="@drawable/circle_background">
+        android:background="@android:color/transparent">
 
-        <ImageView
-            android:id="@+id/chat_test"
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="10dp"
+        <com.champion.bankrobot4.view.RippleBackground
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/chat_ripple"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:rb_color="#0099CC"
             android:layout_centerInParent="true"
-            android:src="@drawable/microphone" />
+            app:rb_duration="3000"
+            app:rb_radius="30dp"
+            app:rb_rippleAmount="4"
+            app:rb_scale="4">
 
-        <ImageView
-            android:id="@+id/chat_animation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:layout_margin="10dp"
-            android:visibility="gone" />
+            <ImageView
+                android:id="@+id/chat_test"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_margin="10dp"
+                android:src="@drawable/microphone" />
+
+            <ImageView
+                android:id="@+id/chat_animation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_margin="10dp"
+                android:visibility="gone" />
+        </com.champion.bankrobot4.view.RippleBackground>
     </RelativeLayout>
 
     <RelativeLayout
@@ -96,10 +106,69 @@
             android:src="@drawable/serial" />
     </RelativeLayout>
 
+    <RelativeLayout
+        android:id="@+id/chatfinish"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="20dp"
+        android:layout_toRightOf="@id/serial_layout"
+        android:layout_marginLeft="20dp"
+        android:background="@drawable/circle_background">
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:layout_centerInParent="true"
+            android:src="@android:drawable/ic_menu_revert" />
+    </RelativeLayout>
+
+    <com.wangjie.rapidfloatingactionbutton.RapidFloatingActionLayout
+        xmlns:rfal="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/activity_main_rfal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        rfal:rfal_frame_color="#ffffff"
+        rfal:rfal_frame_alpha="0.7">
+
+        <com.wangjie.rapidfloatingactionbutton.RapidFloatingActionButton
+            xmlns:rfab="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/activity_main_rfab"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginRight="15dp"
+            android:layout_marginBottom="15dp"
+            android:padding="8dp"
+            rfab:rfab_size="normal"
+            rfab:rfab_drawable="@drawable/champion"
+            rfab:rfab_color_normal="#37474f"
+            rfab:rfab_color_pressed="#263238"
+            rfab:rfab_shadow_radius="7dp"
+            rfab:rfab_shadow_color="#999999"
+            rfab:rfab_shadow_dx="0dp"
+            rfab:rfab_shadow_dy="5dp" />
+
+    </com.wangjie.rapidfloatingactionbutton.RapidFloatingActionLayout>
+
     <TextView
         android:id="@+id/chat_io"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="未连接"
         android:textColor="@android:color/white"/>
+
+    <TextView
+        android:id="@+id/EditTextReception"
+        android:visibility="gone"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:background="@android:color/white"
+        android:layout_alignParentRight="true"
+        android:scrollbarStyle="insideOverlay"
+        android:isScrollContainer="true">
+    </TextView>
 </RelativeLayout>

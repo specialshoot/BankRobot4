@@ -5,7 +5,7 @@
     <string name="iflytek_id">5737f171</string>
     <string name="turing_api_address">http://www.tuling123.com/openapi/api</string>
     <string name="turing_api_key">d51de5bf4300d00c6690337f0a6b7b3e</string>
-    <string name="turing_api_userid">champion123</string>
+    <string name="turing_api_userid">champion321</string>
 
     <!-- 听写 -->
     <string name="text_begin">请开始说话&#8230;</string>
@@ -140,4 +140,6 @@
     <string name="message_user_joined">%s joined</string>
     <string name="message_user_left">%s left</string>
     <string name="user_action_typing">is typing</string>
+
+    <string name="cannotexit">对不起，不能退出应用</string>
 </resources>

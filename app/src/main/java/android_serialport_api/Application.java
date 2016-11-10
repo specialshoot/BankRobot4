@@ -24,20 +24,11 @@ public class Application extends android.app.Application {
 
     public SerialPortFinder mSerialPortFinder = new SerialPortFinder();
     private SerialPort mSerialPort = null;
+    private SerialPort mSerialPortZeng = null;
 
     public SerialPort getSerialPort() throws SecurityException, IOException, InvalidParameterException {
         if (mSerialPort == null) {
-//			/* Read serial port parameters */
-//			SharedPreferences sp = getSharedPreferences("android_serialport_api.sample_preferences", MODE_PRIVATE);
-//			String path = sp.getString("DEVICE", "");
-//			int baudrate = Integer.decode(sp.getString("BAUDRATE", "-1"));
-//
-//			/* Check parameters */
-//			if ( (path.length() == 0) || (baudrate == -1)) {
-//				throw new InvalidParameterException();
-//			}
-
-            String path = "/dev/ttyS1";
+            String path = "/dev/ttyS0";
             int baudrate = 115200;
             /* Open the serial port */
             mSerialPort = new SerialPort(new File(path), baudrate, 0);
@@ -45,10 +36,25 @@ public class Application extends android.app.Application {
         return mSerialPort;
     }
 
+    public SerialPort getSerialPortZeng() throws SecurityException, IOException, InvalidParameterException {
+        if (mSerialPortZeng == null) {
+            String path = "/dev/ttyS1";
+            int baudrate = 115200;
+            /* Open the serial port */
+            mSerialPortZeng = new SerialPort(new File(path), baudrate, 0);
+        }
+        return mSerialPortZeng;
+    }
+
     public void closeSerialPort() {
         if (mSerialPort != null) {
             mSerialPort.close();
             mSerialPort = null;
+        }
+
+        if (mSerialPortZeng != null) {
+            mSerialPortZeng.close();
+            mSerialPortZeng = null;
         }
     }
 }

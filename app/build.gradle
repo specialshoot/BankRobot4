@@ -4,7 +4,7 @@ apply plugin: 'me.tatarka.retrolambda'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         applicationId "com.champion.bankrobot4"
@@ -12,7 +12,9 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
-
+//        jackOptions {
+//            enabled true
+//        }
         ndk {
             moduleName "serial_port"
         }
@@ -48,4 +50,9 @@ dependencies {
         exclude group: 'org.json', module: 'json'
     }
     compile files('libs/Msc.jar')
+    compile 'com.github.wangjiegulu:RapidFloatingActionButton:1.0.3'
+    compile 'com.github.wangjiegulu:ShadowViewHelper:1.0.1'
+    compile 'com.github.wangjiegulu:AndroidInject:1.0.6'
+    compile 'com.github.wangjiegulu:AndroidBucket:1.0.4'
+    compile files('libs/Sunflower.jar')
 }
